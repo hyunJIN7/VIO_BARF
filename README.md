@@ -1,5 +1,6 @@
 # VIO_BARF
 2022 ICCAS Visual Inertial Odometry Priors for Bundle Adjusting Neural Radiance Fields
+BARF
 
 ## BARF :vomiting_face:: Bundle-Adjusting Neural Radiance Fields
 [Chen-Hsuan Lin](https://chenhsuanlin.bitbucket.io/),
@@ -77,6 +78,8 @@ BARF의 the coordinate system of this function output would be [right, up, backw
 - #### BARF models
   To train and evaluate BARF:
   ```bash
+  visdom -port 9000   # 포트 열기
+  
   # <GROUP> and <NAME> can be set to your likes, while <SCENE> is specific to datasets
   
   # Blender (<SCENE>={chair,drums,ficus,hotdog,lego,materials,mic,ship})
@@ -86,6 +89,9 @@ BARF의 the coordinate system of this function output would be [right, up, backw
   # LLFF (<SCENE>={fern,flower,fortress,horns,leaves,orchids,room,trex})
   python3 train.py --group=<GROUP> --model=barf --yaml=barf_llff --name=<NAME> --data.scene=<SCENE> --barf_c2f=[0.1,0.5]
   python3 evaluate.py --group=<GROUP> --model=barf --yaml=barf_llff --name=<NAME> --data.scene=<SCENE> --resume
+  
+  ## ARKit
+  CUDA_VISIBLE_DEVICES=1 python3 train.py --group=arkit --model=barf --yaml=barf_arkit --name=opti_truck10_01 --data.scene=opti_truck10 --barf_c2f=[0.1,0.5] 
   ```
   All the results will be stored in the directory `output/<GROUP>/<NAME>`.
   You may want to organize your experiments by grouping different runs in the same group.
