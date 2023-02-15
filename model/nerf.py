@@ -118,36 +118,38 @@ class Model(base.Model):
             pose = pose_GT # self.train_data.get_all_camera_poses(opt).to(opt.device)  #(3,4)
             if opt.camera.noise:
                 pose = camera.pose.compose([self.graph.pose_noise,pose])
-        elif opt.data.dataset in ["arkit"] :
+        elif opt.data.dataset in ["arkit","strayscanner"] :
             pose_GT = self.train_data.get_all_gt_camera_poses(opt).to(opt.device)  # (3,4)
             pose = self.train_data.get_all_camera_poses(opt).to(opt.device)  #initial pose
         else:
             pose_GT = self.train_data.get_all_gt_camera_poses(opt).to(opt.device)  # (3,4)
             pose = self.graph.pose_eye
         # add learned pose correction to all training data
-        pose_refine = camera.lie.se3_to_SE3(self.graph.se3_refine.weight) #embeding
-        pose = camera.pose.compose([pose_refine,pose]) #refine_pose와 pose 사이 pose_new(x) = poseN o ... o pose2 o pose1(x) 이렇게
+
+        if opt.model != "nerf":
+            pose_refine = camera.lie.se3_to_SE3(self.graph.se3_refine.weight) #embeding
+            pose = camera.pose.compose([pose_refine,pose]) #refine_pose와 pose 사이 pose_new(x) = poseN o ... o pose2 o pose1(x) 이렇게
         return pose,pose_GT
 
-    @torch.no_grad()
-    def get_all_optitrack_training_poses(self,opt):
-        # get ground-truth (canonical) camera poses
-        # add synthetic pose perturbation to all training data
-        if opt.data.dataset in ["blender"] :
-            pose_GT = self.train_data.get_all_camera_poses(opt).to(opt.device)
-            pose = pose_GT # self.train_data.get_all_camera_poses(opt).to(opt.device)  #(3,4)
-            if opt.camera.noise:
-                pose = camera.pose.compose([self.graph.pose_noise,pose])
-        elif opt.data.dataset in ["arkit"] :
-            pose_GT = self.train_data.get_all_optitrack_camera_poses(opt).to(opt.device)  # (3,4) optitrack
-            pose = self.train_data.get_all_camera_poses(opt).to(opt.device)  #initial pose
-        else:
-            pose_GT = self.train_data.get_all_optitrack_camera_poses(opt).to(opt.device)  # (3,4) optitrack
-            pose = self.graph.pose_eye
-        # add learned pose correction to all training data
-        pose_refine = camera.lie.se3_to_SE3(self.graph.se3_refine.weight) #embeding
-        pose = camera.pose.compose([pose_refine,pose]) #refine_pose와 pose 사이 pose_new(x) = poseN o ... o pose2 o pose1(x) 이렇게
-        return pose,pose_GT
+    # @torch.no_grad()
+    # def get_all_optitrack_training_poses(self,opt):
+    #     # get ground-truth (canonical) camera poses
+    #     # add synthetic pose perturbation to all training data
+    #     if opt.data.dataset in ["blender"] :
+    #         pose_GT = self.train_data.get_all_camera_poses(opt).to(opt.device)
+    #         pose = pose_GT # self.train_data.get_all_camera_poses(opt).to(opt.device)  #(3,4)
+    #         if opt.camera.noise:
+    #             pose = camera.pose.compose([self.graph.pose_noise,pose])
+    #     elif opt.data.dataset in ["arkit","strayscanner"] :
+    #         pose_GT = self.train_data.get_all_optitrack_camera_poses(opt).to(opt.device)  # (3,4) optitrack
+    #         pose = self.train_data.get_all_camera_poses(opt).to(opt.device)  #initial pose
+    #     else:
+    #         pose_GT = self.train_data.get_all_optitrack_camera_poses(opt).to(opt.device)  # (3,4) optitrack
+    #         pose = self.graph.pose_eye
+    #     # add learned pose correction to all training data
+    #     pose_refine = camera.lie.se3_to_SE3(self.graph.se3_refine.weight) #embeding
+    #     pose = camera.pose.compose([pose_refine,pose]) #refine_pose와 pose 사이 pose_new(x) = poseN o ... o pose2 o pose1(x) 이렇게
+    #     return pose,pose_GT
 
 
     @torch.no_grad()
@@ -157,10 +159,11 @@ class Model(base.Model):
         res = []
         test_path = "{}/test_view".format(opt.output_path)
         os.makedirs(test_path,exist_ok=True)
+
         for i,batch in enumerate(loader):
             var = edict(batch)
             var = util.move_to_device(var,opt.device)
-            if opt.data.dataset in ["iphone","arkit","blender"] and opt.optim.test_photo:
+            if opt.data.dataset in ["iphone","arkit","blender","strayscanner"] and opt.optim.test_photo:
                 # run test-time optimization to factorize imperfection in optimized poses from view synthesis evaluation
                 var = self.evaluate_test_time_photometric_optim(opt,var)
             var = self.graph.forward(opt,var,mode="eval")
@@ -180,9 +183,11 @@ class Model(base.Model):
             lpips = self.lpips_loss(rgb_map*2-1,var.image*2-1).item()
             res.append(edict(psnr=psnr,ssim=ssim,lpips=lpips))
             # dump novel views
+
             torchvision_F.to_pil_image(rgb_map.cpu()[0]).save("{}/rgb_{}.png".format(test_path,i))
             torchvision_F.to_pil_image(var.image.cpu()[0]).save("{}/rgb_GT_{}.png".format(test_path,i))
             torchvision_F.to_pil_image(invdepth_map.cpu()[0]).save("{}/depth_{}.png".format(test_path,i))
+
 
         # show results in terminal
         print("--------------------------")
@@ -284,7 +289,7 @@ class Model(base.Model):
             for i, batch in enumerate(loader):
                 var = edict(batch)
                 var = util.move_to_device(var, opt.device)
-                if opt.data.dataset in ["iphone", "arkit", "blender"] and opt.optim.test_photo:
+                if opt.data.dataset in ["iphone", "arkit", "blender","strayscanner"] and opt.optim.test_photo:
                     # run test-time optimization to factorize imperfection in optimized poses from view synthesis evaluation
                     var = self.evaluate_test_time_photometric_optim(opt, var)
                 var = self.graph.forward(opt, var, mode="eval")
@@ -319,7 +324,7 @@ class Model(base.Model):
 
     @torch.no_grad()
     def generate_videos_synthesis(self,opt,eps=1e-10):
-        if opt.data.dataset in ["iphone", "arkit"]:  #arkit,iphone test,novel 둘 다 생성위함
+        if opt.data.dataset in ["iphone", "arkit","strayscanner"]:  #arkit,iphone test,novel 둘 다 생성위함
             # pose_pred,pose_GT = self.get_all_training_poses(opt)
             # #novel view에서 iphone도 training GT 원본 가져오게 바꿈,
             # 저 한줄코드는 nerf.py get_all_training_poses가 아닌  barf.py get_all_training_poses로 접근
