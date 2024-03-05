@@ -2,7 +2,7 @@
 2022 ICCAS Visual Inertial Odometry Priors for Bundle Adjusting Neural Radiance Fields
 BARF
 
-## BARF :vomiting_face:: Bundle-Adjusting Neural Radiance Fields
+### BARF :vomiting_face:: Bundle-Adjusting Neural Radiance Fields
 [Chen-Hsuan Lin](https://chenhsuanlin.bitbucket.io/),
 [Wei-Chiu Ma](http://people.csail.mit.edu/weichium/),
 [Antonio Torralba](https://groups.csail.mit.edu/vision/torralbalab/),
